@@ -38,7 +38,7 @@ void set_default_le_phy_before_conn(uint8_t tx_phys_mask, uint8_t rx_phys_mask)
  * Logs information about a connection to the console.
  */
 static void
-bleprph_print_conn_desc(struct ble_gap_conn_desc *desc)
+ble_print_conn_desc(struct ble_gap_conn_desc *desc)
 {
     MODLOG_DFLT(INFO, "handle=%d our_ota_addr_type=%d our_ota_addr=",
                 desc->conn_handle, desc->our_ota_addr.type);
@@ -61,90 +61,13 @@ bleprph_print_conn_desc(struct ble_gap_conn_desc *desc)
                 desc->sec_state.bonded);
 }
 
-#if CONFIG_EXAMPLE_EXTENDED_ADV
-static struct os_mbuf *
-ext_get_data(uint8_t ext_adv_pattern[], int size)
-{
-    struct os_mbuf *data;
-    int rc;
-    data = os_msys_get_pkthdr(size, 0);
-    assert(data);
-    rc = os_mbuf_append(data, ext_adv_pattern, size);
-    assert(rc == 0);
-    return data;
-}
-
 /**
  * Enables advertising with the following parameters:
  *     o General discoverable mode.
  *     o Undirected connectable mode.
  */
 static void
-ext_bleprph_advertise(void)
-{
-    struct ble_gap_ext_adv_params params;
-    struct os_mbuf *data = NULL;
-    uint8_t instance = 1;
-    int rc;
-
-    /* use defaults for non-set params */
-    memset (&params, 0, sizeof(params));
-
-    /* enable connectable advertising */
-    params.connectable = 1;
-    params.scannable = 1;
-    params.legacy_pdu = 1;
-
-    /* advertise using random addr */
-    params.own_addr_type = BLE_OWN_ADDR_PUBLIC;
-
-    /* Set current phy; get mbuf for scan rsp data; fill mbuf with scan rsp data */
-    switch (s_current_phy) {
-    case BLE_HCI_LE_PHY_1M_PREF_MASK:
-        params.primary_phy = BLE_HCI_LE_PHY_1M;
-        params.secondary_phy = BLE_HCI_LE_PHY_1M;
-        data = ext_get_data(ext_adv_pattern_1M, sizeof(ext_adv_pattern_1M));
-        break;
-
-    case BLE_HCI_LE_PHY_2M_PREF_MASK:
-        params.primary_phy = BLE_HCI_LE_PHY_1M;
-        params.secondary_phy = BLE_HCI_LE_PHY_2M;
-        data = ext_get_data(ext_adv_pattern_2M, sizeof(ext_adv_pattern_2M));
-        break;
-
-    case BLE_HCI_LE_PHY_CODED_PREF_MASK:
-        params.primary_phy = BLE_HCI_LE_PHY_CODED;
-        params.secondary_phy = BLE_HCI_LE_PHY_CODED;
-        data = ext_get_data(ext_adv_pattern_coded, sizeof(ext_adv_pattern_coded));
-        break;
-    }
-
-    //params.tx_power = 127;
-    params.sid = 1;
-
-    params.itvl_min = BLE_GAP_ADV_FAST_INTERVAL1_MIN;
-    params.itvl_max = BLE_GAP_ADV_FAST_INTERVAL1_MIN;
-
-    /* configure instance 0 */
-    rc = ble_gap_ext_adv_configure(instance, &params, NULL,
-                                   bleprph_gap_event, NULL);
-    assert (rc == 0);
-
-    rc = ble_gap_ext_adv_set_data(instance, data);
-    assert (rc == 0);
-
-    /* start advertising */
-    rc = ble_gap_ext_adv_start(instance, 0, 0);
-    assert (rc == 0);
-}
-#else
-/**
- * Enables advertising with the following parameters:
- *     o General discoverable mode.
- *     o Undirected connectable mode.
- */
-static void
-bleprph_advertise(void)
+ble_advertise(void)
 {
     struct ble_gap_adv_params adv_params;
     struct ble_hs_adv_fields fields;
@@ -203,7 +126,7 @@ bleprph_advertise(void)
         return;
     }
 }
-#endif
+
 /**
  * The nimble host executes this callback when a GAP event occurs.  The
  * application associates a GAP event callback with each connection that forms.
@@ -220,7 +143,7 @@ bleprph_advertise(void)
  *                                  particular GAP event being signalled.
  */
 static int
-bleprph_gap_event(struct ble_gap_event *event, void *arg)
+ble_gap_event(struct ble_gap_event *event, void *arg)
 {
     struct ble_gap_conn_desc desc;
     int rc;
@@ -234,13 +157,13 @@ bleprph_gap_event(struct ble_gap_event *event, void *arg)
         if (event->connect.status == 0) {
             rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
             assert(rc == 0);
-            bleprph_print_conn_desc(&desc);
+            ble_print_conn_desc(&desc);
         }
         MODLOG_DFLT(INFO, "\n");
 
         if (event->connect.status != 0) {
             /* Connection failed; resume advertising. */
-            bleprph_advertise();
+            ble_advertise();
         }
         return 0;
 
@@ -250,7 +173,7 @@ bleprph_gap_event(struct ble_gap_event *event, void *arg)
         MODLOG_DFLT(INFO, "\n");
 
         /* Connection terminated; resume advertising. */
-        bleprph_advertise();
+        ble_advertise();
         return 0;
 
     case BLE_GAP_EVENT_CONN_UPDATE:
@@ -259,14 +182,14 @@ bleprph_gap_event(struct ble_gap_event *event, void *arg)
                     event->conn_update.status);
         rc = ble_gap_conn_find(event->conn_update.conn_handle, &desc);
         assert(rc == 0);
-        bleprph_print_conn_desc(&desc);
+        ble_print_conn_desc(&desc);
         MODLOG_DFLT(INFO, "\n");
         return 0;
 
     case BLE_GAP_EVENT_ADV_COMPLETE:
         MODLOG_DFLT(INFO, "advertise complete; reason=%d",
                     event->adv_complete.reason);
-        bleprph_advertise();
+        ble_advertise();
         return 0;
 
     case BLE_GAP_EVENT_PHY_UPDATE_COMPLETE:
@@ -281,13 +204,13 @@ bleprph_gap_event(struct ble_gap_event *event, void *arg)
 }
 
 static void
-bleprph_on_reset(int reason)
+ble_on_reset(int reason)
 {
     MODLOG_DFLT(ERROR, "Resetting state; reason=%d\n", reason);
 }
 
 static void
-bleprph_on_sync(void)
+ble_on_sync(void)
 {
     int rc;
 
@@ -313,10 +236,10 @@ bleprph_on_sync(void)
     s_current_phy = BLE_HCI_LE_PHY_1M_PREF_MASK;
 
     /* Begin advertising. */
-    bleprph_advertise();
+    ble_advertise();
 }
 
-void bleprph_host_task(void *param)
+void ble_host_task(void *param)
 {
     ESP_LOGI(tag, "BLE Host Task Started");
     /* This function will return only when nimble_port_stop() is executed */
@@ -347,8 +270,8 @@ app_main(void)
     }
 
     /* Initialize the NimBLE host configuration. */
-    ble_hs_cfg.reset_cb = bleprph_on_reset;
-    ble_hs_cfg.sync_cb = bleprph_on_sync;
+    ble_hs_cfg.reset_cb = ble_on_reset;
+    ble_hs_cfg.sync_cb = ble_on_sync;
     ble_hs_cfg.gatts_register_cb = gatt_svr_register_cb;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
 

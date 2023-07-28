@@ -820,10 +820,10 @@ CONFIG_PERIPH_CTRL_FUNC_IN_IRAM=y
 #
 # Main XTAL Config
 #
-# CONFIG_XTAL_FREQ_26 is not set
-CONFIG_XTAL_FREQ_40=y
+CONFIG_XTAL_FREQ_26=y
+# CONFIG_XTAL_FREQ_40 is not set
 # CONFIG_XTAL_FREQ_AUTO is not set
-CONFIG_XTAL_FREQ=40
+CONFIG_XTAL_FREQ=26
 # end of Main XTAL Config
 # end of Hardware Settings
 

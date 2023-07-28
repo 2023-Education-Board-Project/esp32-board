@@ -22,8 +22,6 @@ struct ble_gatt_register_ctxt;
 #define LE_PHY_UUID16               0xABF2
 #define LE_PHY_CHR_UUID16           0xABF3
 */
-#define LE_PHY_UUID16               0xAAFE
-#define LE_PHY_CHR_UUID16           0xAAFE
 
 void gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg);
 int gatt_svr_init_le_phy(void);

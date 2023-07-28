@@ -16,7 +16,7 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "phy_prph.h"
 
-#if 0
+#if 1
 #if CONFIG_EXAMPLE_EXTENDED_ADV
 static uint8_t ext_adv_pattern_1M[] = {
     0x02, 0x01, 0x06,
@@ -206,7 +206,7 @@ bleprph_advertise(void)
     fields.name_is_complete = 1;
 
     fields.uuids16 = (ble_uuid16_t[]) {
-        BLE_UUID16_INIT(LE_PHY_UUID16)
+        BLE_UUID16_INIT(0xf005),
     };
     fields.num_uuids16 = 1;
     fields.uuids16_is_complete = 1;

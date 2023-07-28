@@ -24,20 +24,20 @@ static const struct ble_gatt_svc_def gatt_svr_svcs_le_phy[] = {
     {
         /*** Service: LE PHY. */
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = BLE_UUID16_DECLARE(0xf005),
+        .uuid = BLE_UUID16_DECLARE(LE_SERVICE_UUID16),
         .characteristics = (struct ble_gatt_chr_def[])
         {
-            {
                 /*** Characteristic */
+            {
                 //read
-                .uuid = BLE_UUID16_DECLARE(0xda01),
+                .uuid = BLE_UUID16_DECLARE(LE_RX_CHR_UUID16),
                 .access_cb = gatt_svr_chr_access_le_phy,
                 .val_handle = &gatt_svr_chr_val_handle,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_READ_ENC,
             }, 
             {
                 //write
-                .uuid = BLE_UUID16_DECLARE(0xda02),
+                .uuid = BLE_UUID16_DECLARE(LE_TX_CHR_UUID16),
                 .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC,
                 .access_cb = gatt_svr_chr_access_le_phy,
                 .val_handle = &gatt_svr_chr_val_handle,
@@ -69,14 +69,16 @@ gatt_svr_chr_access_le_phy(uint16_t conn_handle, uint16_t attr_handle,
      * 128-bit UUID.
      */
 
-    if (ble_uuid_cmp(uuid, BLE_UUID16_DECLARE(0xf005)) == 0) {
+    if (ble_uuid_cmp(uuid, BLE_UUID16_DECLARE(LE_SERVICE_UUID16)) == 0) {
         switch (ctxt->op) {
         case BLE_GATT_ACCESS_OP_READ_CHR:
+        //read
             rand_num = rand();
             rc = os_mbuf_append(ctxt->om, &rand_num, sizeof rand_num);
             return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 
         case BLE_GATT_ACCESS_OP_WRITE_CHR:
+        //write
             len = OS_MBUF_PKTLEN(ctxt->om);
             if (len > 0) {
                 le_phy_val = (uint8_t *)malloc(len * sizeof(uint8_t));

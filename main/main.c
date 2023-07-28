@@ -16,32 +16,7 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "phy_prph.h"
 
-#if 1
-#if CONFIG_EXAMPLE_EXTENDED_ADV
-static uint8_t ext_adv_pattern_1M[] = {
-    0x02, 0x01, 0x06,
-    0x03, 0x03, 0xab, 0xcd,
-    0x03, 0x03, 0xAB, 0xF2,
-    0x0e, 0X09, 'b', 'l', 'e', 'p', 'r', 'p', 'h', '-', 'p', 'h', 'y', '-', '1', 'M',
-};
-
-static uint8_t ext_adv_pattern_2M[] = {
-    0x02, 0x01, 0x06,
-    0x03, 0x03, 0xab, 0xcd,
-    0x03, 0x03, 0xAB, 0xF2,
-    0x0e, 0X09, 'b', 'l', 'e', 'p', 'r', 'p', 'h', '-', 'p', 'h', 'y', '-', '2', 'M',
-};
-
-static uint8_t ext_adv_pattern_coded[] = {
-    0x02, 0x01, 0x06,
-    0x03, 0x03, 0xab, 0xcd,
-    0x03, 0x03, 0xAB, 0xF2,
-    0x11, 0X09, 'b', 'l', 'e', 'p', 'r', 'p', 'h', '-', 'p', 'h', 'y', '-', 'c', 'o', 'd', 'e',
-    'd',
-};
-#endif
-
-static const char *tag = "NimBLE_BLE_PHY_PRPH";
+static const char *tag = "ESP32_BOARD";
 static int bleprph_gap_event(struct ble_gap_event *event, void *arg);
 static uint8_t own_addr_type;
 
@@ -265,11 +240,7 @@ bleprph_gap_event(struct ble_gap_event *event, void *arg)
 
         if (event->connect.status != 0) {
             /* Connection failed; resume advertising. */
-#if CONFIG_EXAMPLE_EXTENDED_ADV
-            ext_bleprph_advertise();
-#else
             bleprph_advertise();
-#endif
         }
         return 0;
 
@@ -279,30 +250,7 @@ bleprph_gap_event(struct ble_gap_event *event, void *arg)
         MODLOG_DFLT(INFO, "\n");
 
         /* Connection terminated; resume advertising. */
-
-#if CONFIG_EXAMPLE_EXTENDED_ADV
-        switch (s_current_phy) {
-        case BLE_HCI_LE_PHY_1M_PREF_MASK:
-            /* Setting current phy to create connection on 2M PHY */
-            s_current_phy = BLE_HCI_LE_PHY_2M_PREF_MASK;
-            break;
-
-        case BLE_HCI_LE_PHY_2M_PREF_MASK:
-            /* Setting current phy to create connection on CODED PHY */
-            s_current_phy = BLE_HCI_LE_PHY_CODED_PREF_MASK;
-            break;
-
-        case BLE_HCI_LE_PHY_CODED_PREF_MASK:
-            return 0;
-
-        default:
-            return 0;
-        }
-        set_default_le_phy_before_conn(s_current_phy, s_current_phy);
-        ext_bleprph_advertise();
-#else
         bleprph_advertise();
-#endif
         return 0;
 
     case BLE_GAP_EVENT_CONN_UPDATE:
@@ -318,9 +266,7 @@ bleprph_gap_event(struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_ADV_COMPLETE:
         MODLOG_DFLT(INFO, "advertise complete; reason=%d",
                     event->adv_complete.reason);
-#if !CONFIG_EXAMPLE_EXTENDED_ADV
         bleprph_advertise();
-#endif
         return 0;
 
     case BLE_GAP_EVENT_PHY_UPDATE_COMPLETE:
@@ -367,11 +313,7 @@ bleprph_on_sync(void)
     s_current_phy = BLE_HCI_LE_PHY_1M_PREF_MASK;
 
     /* Begin advertising. */
-#if CONFIG_EXAMPLE_EXTENDED_ADV
-    ext_bleprph_advertise();
-#else
     bleprph_advertise();
-#endif
 }
 
 void bleprph_host_task(void *param)
@@ -411,21 +353,7 @@ app_main(void)
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
 
     ble_hs_cfg.sm_io_cap = CONFIG_EXAMPLE_IO_TYPE;
-#ifdef CONFIG_EXAMPLE_BONDING
-    ble_hs_cfg.sm_bonding = 1;
-#endif
-#ifdef CONFIG_EXAMPLE_MITM
-    ble_hs_cfg.sm_mitm = 1;
-#endif
-#ifdef CONFIG_EXAMPLE_USE_SC
-    ble_hs_cfg.sm_sc = 1;
-#else
     ble_hs_cfg.sm_sc = 0;
-#endif
-#ifdef CONFIG_EXAMPLE_BONDING
-    ble_hs_cfg.sm_our_key_dist = 1;
-    ble_hs_cfg.sm_their_key_dist = 1;
-#endif
 
     rc = gatt_svr_init_le_phy();
     assert(rc == 0);
@@ -445,118 +373,3 @@ app_main(void)
         ESP_LOGE(tag, "scli_init() failed");
     }
 }
-
-#else
-
-uint8_t ble_addr_type;
-void    ble_app_advertise(void);
-
-// Write data to ESP32 defined as server
-static int device_write(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
-{
-    printf("Data from the client: %.*s\n", ctxt->om->om_len, ctxt->om->om_data);
-    return 0;
-}
-
-// Read data from ESP32 defined as server
-static int device_read(uint16_t con_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
-{
-    os_mbuf_append(ctxt->om, "Data from the server", strlen("Data from the server"));
-    return 0;
-}
-
-
-// Array of pointers to other service definitions
-// UUID - Universal Unique Identifier
-static const struct ble_gatt_svc_def gatt_svcs[] = {
-    {.type = BLE_GATT_SVC_TYPE_PRIMARY,
-     .uuid = BLE_UUID16_DECLARE(0xf005),                 // Define UUID for device type
-     .characteristics = (struct ble_gatt_chr_def[]){
-         {.uuid = BLE_UUID128_DECLARE(0x5261da01, 0xfa7e, 0x42ab, 0x850b, 0x7c80220097cc),           // Define UUID for reading
-          .flags = BLE_GATT_CHR_F_READ,
-          .access_cb = device_read},
-         {.uuid = BLE_UUID128_DECLARE(0x5261da02, 0xfa7e, 0x42ab, 0x850b, 0x7c80220097cc),           // Define UUID for writing
-          .flags = BLE_GATT_CHR_F_WRITE,
-          .access_cb = device_write},
-         {0}}},
-    {0}};
-
-
-static int ble_gap_event(struct ble_gap_event *event, void *arg)
-{
-    switch (event->type)
-    {
-        case BLE_GAP_EVENT_CONNECT:
-            ESP_LOGI("GAP", "BLE GAP EVENT CONNECT %s", event->connect.status == 0 ? "OK!" : "FAILED!");
-            if (event->connect.status != 0)
-            {
-                ble_app_advertise();
-            }
-            break;
-        case BLE_GAP_EVENT_ADV_COMPLETE:
-            ESP_LOGI("GAP", "BLE GAP EVENT");
-            ble_app_advertise();
-            break;
-        default:
-            break;
-    }
-    return 0;
-}
-
-void    ble_app_advertise(void)
-{
-    struct ble_hs_adv_fields    fields;
-    const char  *device_name;
-    memset(&fields, 0, sizeof(fields));
-    
-    device_name = ble_svc_gap_device_name();
-    fields.name = (uint8_t *)device_name;
-    fields.name_len = strlen(device_name);
-    fields.name_is_complete = 1;
-
-    ble_uuid16_t    uuid16;
-    ble_uuid_t  type;
-
-    type.type = BLE_UUID_TYPE_16;
-    uuid16.u = type;
-    uuid16.value = 0xf005;
-    
-    fields.uuids16 = &uuid16;
-    fields.num_uuids16 = 1;
-    fields.uuids16_is_complete = 1;
-
-    ble_gap_adv_set_fields(&fields);
-    
-    struct ble_gap_adv_params   adv_params;
-    memset(&adv_params, 0, sizeof(adv_params));
-    adv_params.conn_mode = BLE_GAP_CONN_MODE_UND; // connectable or non-connectable
-    adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN; // discoverable or non-discoverable
-    ble_gap_adv_start(ble_addr_type, NULL, BLE_HS_FOREVER, &adv_params, ble_gap_event, NULL);
-}
-
-
-void    ble_app_on_sync(void)
-{
-    ble_hs_id_infer_auto(0, &ble_addr_type);
-    ble_app_advertise();
-}
-
-void    host_task(void *param)
-{
-    nimble_port_run();
-}
-
-void    app_main()
-{
-    nvs_flash_init();
-
-    nimble_port_init();
-    ble_svc_gap_device_name_set("BLE_SERVER");
-    ble_svc_gap_init();
-    ble_svc_gatt_init();
-    ble_gatts_count_cfg(gatt_svcs);
-    ble_gatts_add_svcs(gatt_svcs);
-    ble_hs_cfg.sync_cb = ble_app_on_sync;      // 5 - Initialize application
-    nimble_port_freertos_init(host_task);      // 6 - Run the thread
-}
-#endif

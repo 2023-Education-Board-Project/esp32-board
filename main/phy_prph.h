@@ -18,10 +18,10 @@ struct ble_hs_cfg;
 struct ble_gatt_register_ctxt;
 
 /** Making sure client connects to server having LE PHY UUID */
-/*
-#define LE_PHY_UUID16               0xABF2
-#define LE_PHY_CHR_UUID16           0xABF3
-*/
+
+#define LE_SERVICE_UUID16               0xf005
+#define LE_RX_CHR_UUID16				0xda01
+#define LE_TX_CHR_UUID16				0xda02
 
 void gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg);
 int gatt_svr_init_le_phy(void);

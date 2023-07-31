@@ -59,7 +59,7 @@ gatt_svr_chr_access_le_phy(uint16_t conn_handle, uint16_t attr_handle,
                            void *arg)
 {
     const ble_uuid_t *uuid;
-    int rand_num;
+    char def_string[12] = "hello world";
     int rc;
     int len;
     uint16_t copied_len;
@@ -73,8 +73,7 @@ gatt_svr_chr_access_le_phy(uint16_t conn_handle, uint16_t attr_handle,
         switch (ctxt->op) {
         case BLE_GATT_ACCESS_OP_READ_CHR:
         //read
-            rand_num = rand();
-            rc = os_mbuf_append(ctxt->om, &rand_num, sizeof rand_num);
+            rc = os_mbuf_append(ctxt->om, &def_string, strlen(def_string));
             return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 
         case BLE_GATT_ACCESS_OP_WRITE_CHR:

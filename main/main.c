@@ -17,7 +17,7 @@
 #include "phy_prph.h"
 
 static const char *tag = "ESP32_BOARD";
-static int bleprph_gap_event(struct ble_gap_event *event, void *arg);
+static int ble_gap_event(struct ble_gap_event *event, void *arg);
 static uint8_t own_addr_type;
 
 static uint8_t s_current_phy;
@@ -120,7 +120,7 @@ ble_advertise(void)
     adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
     adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
     rc = ble_gap_adv_start(own_addr_type, NULL, BLE_HS_FOREVER,
-                           &adv_params, bleprph_gap_event, NULL);
+                           &adv_params, ble_gap_event, NULL);
     if (rc != 0) {
         MODLOG_DFLT(ERROR, "error enabling advertisement; rc=%d\n", rc);
         return;
@@ -169,7 +169,7 @@ ble_gap_event(struct ble_gap_event *event, void *arg)
 
     case BLE_GAP_EVENT_DISCONNECT:
         MODLOG_DFLT(INFO, "disconnect; reason=%d ", event->disconnect.reason);
-        bleprph_print_conn_desc(&event->disconnect.conn);
+        ble_print_conn_desc(&event->disconnect.conn);
         MODLOG_DFLT(INFO, "\n");
 
         /* Connection terminated; resume advertising. */
@@ -288,7 +288,7 @@ app_main(void)
     /* XXX Need to have template for store */
     ble_store_config_init();
 
-    nimble_port_freertos_init(bleprph_host_task);
+    nimble_port_freertos_init(ble_host_task);
 
     /* Initialize command line interface to accept input from user */
     rc = scli_init();

@@ -15,8 +15,22 @@
 
 static uint8_t *le_phy_val;
 static uint16_t gatt_svr_chr_val_handle;
+
+static uint16_t read_val_handle;
+static uint16_t write_val_handle;
+
 static int
 gatt_svr_chr_access_le_phy(uint16_t conn_handle, uint16_t attr_handle,
+                           struct ble_gatt_access_ctxt *ctxt,
+                           void *arg);
+
+static int
+read_func(uint16_t conn_handle, uint16_t attr_handle,
+                           struct ble_gatt_access_ctxt *ctxt,
+                           void *arg);
+                           
+static int
+write_func(uint16_t conn_handle, uint16_t attr_handle,
                            struct ble_gatt_access_ctxt *ctxt,
                            void *arg);
 
@@ -30,17 +44,21 @@ static const struct ble_gatt_svc_def gatt_svr_svcs_le_phy[] = {
                 /*** Characteristic */
             {
                 //read
-                .uuid = BLE_UUID16_DECLARE(LE_RX_CHR_UUID16),
-                .access_cb = gatt_svr_chr_access_le_phy,
-                .val_handle = &gatt_svr_chr_val_handle,
+                //.uuid = BLE_UUID16_DECLARE(LE_RX_CHR_UUID16),
+                .uuid = BLE_UUID128_DECLARE(0xcc,0x97,0x00,0x22,0x80,0x7c,0x0b,0x85,
+                                            0xab,0x42,0x7e,0xfa,0x01,0xda,0x61,0x52),
+                .access_cb = read_func,
+                .val_handle = &read_val_handle,
                 .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_READ_ENC,
             }, 
             {
                 //write
-                .uuid = BLE_UUID16_DECLARE(LE_TX_CHR_UUID16),
+                //.uuid = BLE_UUID16_DECLARE(LE_TX_CHR_UUID16),
+                .uuid = BLE_UUID128_DECLARE(0xcc,0x97,0x00,0x22,0x80,0x7c,0x0b,0x85,
+                                            0xab,0x42,0x7e,0xfa,0x02,0xda,0x61,0x52),
                 .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC,
-                .access_cb = gatt_svr_chr_access_le_phy,
-                .val_handle = &gatt_svr_chr_val_handle,
+                .access_cb = write_func,
+                .val_handle = &write_val_handle,
             },
             {
                 0, /* No more characteristics in this service. */
@@ -52,6 +70,28 @@ static const struct ble_gatt_svc_def gatt_svr_svcs_le_phy[] = {
         0, /* No more services. */
     },
 };
+
+static int read_func(uint16_t conn_handle, uint16_t attr_handle,
+                    struct ble_gatt_access_ctxt *ctxt,
+                    void *arg)
+{
+    const ble_uuid_t *uuid;
+    int rc;
+    int len;
+
+    uuid = ctxt->chr->uuid;
+    MODLOG_DFLT(INFO, "uuid:%d", uuid->type);
+    rc = os_mbuf_append(ctxt->om, "Data from the server", strlen("Data from the server"));
+    return 0;
+}
+
+static int write_func(uint16_t conn_handle, uint16_t attr_handle,
+                    struct ble_gatt_access_ctxt *ctxt,
+                    void *arg)
+{
+    MODLOG_DFLT(INFO, "Data from client: %.*s\n", ctxt->om->om_len, ctxt->om->om_data);
+    return 0;
+}
 
 static int
 gatt_svr_chr_access_le_phy(uint16_t conn_handle, uint16_t attr_handle,

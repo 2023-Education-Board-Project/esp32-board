@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Unlicense OR CC0-1.0
- */
-
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,140 +7,149 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "phy_prph.h"
 
-static uint8_t *le_phy_val;
-static uint16_t gatt_svr_chr_val_handle;
+static const char *model_num = "ESP32-BOARD";
+static const char *serial_num = "MAC_ADRESS";
+static const char *firmware_rev = "unknown";
 
-static uint16_t read_val_handle;
-static uint16_t write_val_handle;
+uint16_t rx_handle;
+uint16_t tx_handle;
 
-static int
-gatt_svr_chr_access_le_phy(uint16_t conn_handle, uint16_t attr_handle,
-                           struct ble_gatt_access_ctxt *ctxt,
-                           void *arg);
 
-static int
-read_func(uint16_t conn_handle, uint16_t attr_handle,
-                           struct ble_gatt_access_ctxt *ctxt,
-                           void *arg);
-                           
-static int
-write_func(uint16_t conn_handle, uint16_t attr_handle,
-                           struct ble_gatt_access_ctxt *ctxt,
-                           void *arg);
+ble_uuid16_t    deviceInfo_uuid = BLE_UUID16_INIT(0x180A);
+ble_uuid16_t    modelNum_uuid = BLE_UUID16_INIT(0x2a24);
+ble_uuid16_t    serialNum_uuid = BLE_UUID16_INIT(0x2a25);
+ble_uuid16_t    firmwareRevision_uuid = BLE_UUID16_INIT(0x2a26);
 
-static const struct ble_gatt_svc_def gatt_svr_svcs_le_phy[] = {
+ble_uuid16_t    service_uuid = BLE_UUID16_INIT(0xf005);
+ble_uuid128_t   rxChar_uuid = BLE_UUID128_INIT(0xcc,0x97,0x00,0x22,0x80,0x7c,0x0b,0x85,
+                                            0xab,0x42,0x7e,0xfa,0x01,0xda,0x61,0x52);
+ble_uuid128_t   txChar_uuid = BLE_UUID128_INIT(0xcc,0x97,0x00,0x22,0x80,0x7c,0x0b,0x85,
+                                            0xab,0x42,0x7e,0xfa,0x02,0xda,0x61,0x52);
+
+static int  read(uint16_t conn_handle, uint16_t attr_handle,
+                               struct ble_gatt_access_ctxt *ctxt, void *arg);
+static int  write(uint16_t conn_handle, uint16_t attr_handle,
+                               struct ble_gatt_access_ctxt *ctxt, void *arg);
+
+static int  modelNum_info(uint16_t conn_handle, uint16_t attr_handle,
+                                struct ble_gatt_access_ctxt *ctxt, void *arg);
+
+static int  serialNum_info(uint16_t conn_handle, uint16_t attr_handle,
+                                struct ble_gatt_access_ctxt *ctxt, void *arg);
+
+static int  firmwareRev_info(uint16_t conn_handle, uint16_t attr_handle,
+                                struct ble_gatt_access_ctxt *ctxt, void *arg);
+
+static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
     {
-        /*** Service: LE PHY. */
+        /* Service: Custom */
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = BLE_UUID16_DECLARE(LE_SERVICE_UUID16),
+        .uuid = &service_uuid.u,
         .characteristics = (struct ble_gatt_chr_def[])
         {
-                /*** Characteristic */
             {
-                //read
-                //.uuid = BLE_UUID16_DECLARE(LE_RX_CHR_UUID16),
-                .uuid = BLE_UUID128_DECLARE(0xcc,0x97,0x00,0x22,0x80,0x7c,0x0b,0x85,
-                                            0xab,0x42,0x7e,0xfa,0x01,0xda,0x61,0x52),
-                .access_cb = read_func,
-                .val_handle = &read_val_handle,
-                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_READ_ENC,
-            }, 
-            {
-                //write
-                //.uuid = BLE_UUID16_DECLARE(LE_TX_CHR_UUID16),
-                .uuid = BLE_UUID128_DECLARE(0xcc,0x97,0x00,0x22,0x80,0x7c,0x0b,0x85,
-                                            0xab,0x42,0x7e,0xfa,0x02,0xda,0x61,0x52),
-                .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC,
-                .access_cb = write_func,
-                .val_handle = &write_val_handle,
+                /* Characteristic: read */
+                .uuid = &rxChar_uuid.u,
+                .access_cb = read,
+                .val_handle = &rx_handle,
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
             },
             {
-                0, /* No more characteristics in this service. */
-            }
-        },
+                /* Characteristic: write */
+                .uuid = &txChar_uuid.u,
+                .access_cb = write,
+                .val_handle = &tx_handle,
+                .flags = BLE_GATT_CHR_F_WRITE,
+            },
+            {
+                0, /* No more characteristics in this service */
+            },
+        }
     },
-
     {
-        0, /* No more services. */
+        /* Service: Device Information */
+        .type = BLE_GATT_SVC_TYPE_PRIMARY,
+        .uuid = &deviceInfo_uuid.u,
+        .characteristics = (struct ble_gatt_chr_def[])
+        {
+            {
+                /* Characteristic: * Model number string */
+                .uuid = &modelNum_uuid.u,
+                .access_cb = modelNum_info,
+                .flags = BLE_GATT_CHR_F_READ,
+            },
+            {
+                /* Characteristic: Serial number string */
+                .uuid = &serialNum_uuid.u,
+                .access_cb = serialNum_info,
+                .flags = BLE_GATT_CHR_F_READ,
+            },
+            {
+                /* Characteristic: Firmware revision string */
+                .uuid = &firmwareRevision_uuid.u,
+                .access_cb = firmwareRev_info,
+                .flags = BLE_GATT_CHR_F_READ,
+            },
+            {
+                0, /* No more characteristics in this service */
+            },
+        }
+    },
+    {
+        0, /* No more services */
     },
 };
 
-static int read_func(uint16_t conn_handle, uint16_t attr_handle,
-                    struct ble_gatt_access_ctxt *ctxt,
-                    void *arg)
+static int  read(uint16_t conn_handle, uint16_t attr_handle,
+                               struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
-    const ble_uuid_t *uuid;
+    /* Sensor location, set to "Chest" */
+    static uint8_t body_sens_loc = 0x01;
+    uint16_t uuid;
     int rc;
-    int len;
 
-    uuid = ctxt->chr->uuid;
-    MODLOG_DFLT(INFO, "uuid:%d", uuid->type);
-    rc = os_mbuf_append(ctxt->om, "Data from the server", strlen("Data from the server"));
+    uuid = ble_uuid_u16(ctxt->chr->uuid);
+
+    rc = os_mbuf_append(ctxt->om, &body_sens_loc, sizeof(body_sens_loc));
+
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+}
+
+static int  write(uint16_t conn_handle, uint16_t attr_handle,
+                               struct ble_gatt_access_ctxt *ctxt, void *arg)
+{
+    MODLOG_DFLT(INFO, "Data from the client: %.*s\n", ctxt->om->om_len, ctxt->om->om_data);
     return 0;
 }
 
-static int write_func(uint16_t conn_handle, uint16_t attr_handle,
-                    struct ble_gatt_access_ctxt *ctxt,
-                    void *arg)
+static int  modelNum_info(uint16_t conn_handle, uint16_t attr_handle,
+                                struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
-    MODLOG_DFLT(INFO, "Data from client: %.*s\n", ctxt->om->om_len, ctxt->om->om_data);
-    return 0;
-}
-
-static int
-gatt_svr_chr_access_le_phy(uint16_t conn_handle, uint16_t attr_handle,
-                           struct ble_gatt_access_ctxt *ctxt,
-                           void *arg)
-{
-    const ble_uuid_t *uuid;
-    char def_string[12] = "hello world";
     int rc;
-    int len;
-    uint16_t copied_len;
-    uuid = ctxt->chr->uuid;
-
-    /* Determine which characteristic is being accessed by examining its
-     * 128-bit UUID.
-     */
-
-    if (ble_uuid_cmp(uuid, BLE_UUID16_DECLARE(LE_SERVICE_UUID16)) == 0) {
-        switch (ctxt->op) {
-        case BLE_GATT_ACCESS_OP_READ_CHR:
-        //read
-            rc = os_mbuf_append(ctxt->om, &def_string, strlen(def_string));
-            return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
-
-        case BLE_GATT_ACCESS_OP_WRITE_CHR:
-        //write
-            len = OS_MBUF_PKTLEN(ctxt->om);
-            if (len > 0) {
-                le_phy_val = (uint8_t *)malloc(len * sizeof(uint8_t));
-                if (le_phy_val) {
-                    rc = ble_hs_mbuf_to_flat(ctxt->om, le_phy_val, len, &copied_len);
-                    if (rc == 0) {
-                        MODLOG_DFLT(INFO, "Write received of len = %d", copied_len);
-                        return 0;
-                    } else {
-                        MODLOG_DFLT(ERROR, "Failed to receive write characteristic");
-                    }
-                }
-            }
-            break;
-
-        default:
-            break;
-        }
-    }
-
-    /* Unknown characteristic; the nimble stack should not have called this
-     * function.
-     */
-    assert(0);
-    return BLE_ATT_ERR_UNLIKELY;
+    
+    rc = os_mbuf_append(ctxt->om, model_num, strlen(model_num));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
 
-void
-gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg)
+static int  serialNum_info(uint16_t conn_handle, uint16_t attr_handle,
+                                struct ble_gatt_access_ctxt *ctxt, void *arg)
+{
+    int rc;
+    
+    rc = os_mbuf_append(ctxt->om, serial_num, strlen(serial_num));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+}
+
+static int  firmwareRev_info(uint16_t conn_handle, uint16_t attr_handle,
+                                struct ble_gatt_access_ctxt *ctxt, void *arg)
+{
+    int rc;
+    
+    rc = os_mbuf_append(ctxt->om, firmware_rev, strlen(firmware_rev));
+    return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+}
+
+void    gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg)
 {
     char buf[BLE_UUID_STR_LEN];
 
@@ -178,19 +181,19 @@ gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg)
 }
 
 int
-gatt_svr_init_le_phy(void)
+gatt_svr_init(void)
 {
     int rc;
 
     ble_svc_gap_init();
     ble_svc_gatt_init();
 
-    rc = ble_gatts_count_cfg(gatt_svr_svcs_le_phy);
+    rc = ble_gatts_count_cfg(gatt_svr_svcs);
     if (rc != 0) {
         return rc;
     }
 
-    rc = ble_gatts_add_svcs(gatt_svr_svcs_le_phy);
+    rc = ble_gatts_add_svcs(gatt_svr_svcs);
     if (rc != 0) {
         return rc;
     }

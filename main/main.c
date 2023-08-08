@@ -160,7 +160,7 @@ static void ble_rx_loop(TimerHandle_t ev)
         return;
     }
 
-    hrm[0] = 0x06; /* dummy eader */
+    hrm[0] = 0x06; /* dummy header */
     hrm[1] = dummyData; /* storing dummy data */
 
     /* Simulation of heart beats */

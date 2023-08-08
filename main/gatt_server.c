@@ -5,7 +5,7 @@
 #include "host/ble_uuid.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
-#include "phy_prph.h"
+#include "ble_server.h"
 
 static const char *model_num = "ESP32-BOARD";
 static const char *serial_num = "MAC_ADRESS";

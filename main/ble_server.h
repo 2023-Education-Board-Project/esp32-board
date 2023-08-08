@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Unlicense OR CC0-1.0
  */
 
-#ifndef H_PHY_PRPH_
-#define H_PHY_PRPH_
+#ifndef BLE_SERVER_H
+#define BLE_SERVER_H
 
 #include "nimble/ble.h"
 #include "modlog/modlog.h"

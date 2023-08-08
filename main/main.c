@@ -18,9 +18,9 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 
-#include "phy_prph.h"
+#include "ble_server.h"
 
-#define TIMER   1
+#define TIMER   0
 
 static const char *tag = "ESP32";
 
@@ -177,10 +177,11 @@ static void ble_rx_loop(TimerHandle_t ev)
     ble_rx_loop_reset();
 }
 #else
+
 static void ble_rx_loop(void *param)
 {
     static uint8_t  data[2];
-    int  rc;
+    static int  rc;
     struct os_mbuf *om;
 
     while (1)
@@ -192,14 +193,13 @@ static void ble_rx_loop(void *param)
             continue;
         }
         xSemaphoreGive(notify_mutex);
-        
         data[0] = 0x06; /* contact of a sensor */
-        data[1] = heartrate; /* storing dummy data */
+        data[1] = dummyData; /* storing dummy data */
         /* Simulation of heart beats */
-        heartrate++;
-        if (heartrate == 160)
+        dummyData++;
+        if (dummyData == 160)
         {
-            heartrate = 90;
+            dummyData = 90;
         }
         om = ble_hs_mbuf_from_flat(data, sizeof(data));
         rc = ble_gatts_notify_custom(conn_handle, rx_handle, om);
@@ -250,7 +250,7 @@ static int  ble_gap_event(struct ble_gap_event *event, void *arg)
             notify_state = event->subscribe.cur_notify;
             ble_rx_loop_reset(); //timer activate
             #else
-            xSemaphoreTake(notify_mutex, 1000 / portTICK_PERIOD_MS);
+            //xSemaphoreTake(notify_mutex, 1000 / portTICK_PERIOD_MS);
             notify_state = event->subscribe.cur_notify;
             xSemaphoreGive(notify_mutex);
             #endif
@@ -262,7 +262,7 @@ static int  ble_gap_event(struct ble_gap_event *event, void *arg)
             #else
             xSemaphoreTake(notify_mutex, 1000 / portTICK_PERIOD_MS);
             notify_state = event->subscribe.cur_notify;
-            xSemaphoreGive(notify_mutex);
+            //xSemaphoreGive(notify_mutex);
             #endif
         }
         ESP_LOGI("BLE_GAP_SUBSCRIBE_EVENT", "conn_handle from subscribe=%d", conn_handle);
@@ -344,7 +344,7 @@ void app_main(void)
     #if TIMER
     ble_rx_timer = xTimerCreate("blehr_tx_timer", pdMS_TO_TICKS(1000), pdTRUE, (void *)0, ble_rx_loop);
     #else
-    xTaskCreate(ble_rx_loop, "ble_rx_loop", 2048, NULL, tskIDLE_PRIORITY, &tskHandle);
+    xTaskCreate(ble_rx_loop, "ble_rx_loop", 4096, NULL, tskIDLE_PRIORITY, &tskHandle);
     #endif
 
     rc = gatt_svr_init();

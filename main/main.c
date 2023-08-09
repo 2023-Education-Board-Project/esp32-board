@@ -180,7 +180,7 @@ static void ble_rx_loop(TimerHandle_t ev)
 
 static void ble_rx_loop(void *param)
 {
-    static uint8_t  data[2];
+    static uint8_t  data[8];
     static int  rc;
     struct os_mbuf *om;
 

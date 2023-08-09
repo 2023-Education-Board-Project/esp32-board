@@ -118,7 +118,18 @@ static int  read(uint16_t conn_handle, uint16_t attr_handle,
 static int  write(uint16_t conn_handle, uint16_t attr_handle,
                                struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
+    uint8_t data[8];
+    uint8_t func;
+    
     MODLOG_DFLT(INFO, "Data from the client: %.*s\n", ctxt->om->om_len, ctxt->om->om_data);
+    
+    //parsing
+    for (int i = 0; i < 8; i++)
+    {
+        data[i] = ctxt->om->om_data[i];
+        MODLOG_DFLT(INFO, "Data [%d]: %X\n", i, data[i]);
+    }
+    //call func
     return 0;
 }
 

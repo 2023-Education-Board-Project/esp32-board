@@ -1,6 +1,7 @@
 set(srcs "main.c"
     "gatt_server.c"
-    "lvgl_ui.c")
+    "lvgl_ui.c"
+    "ble_server.c")
 
 idf_component_register(SRCS "${srcs}"
                        INCLUDE_DIRS "./include")

@@ -13,24 +13,17 @@
 extern "C" {
 #endif
 
-
-extern uint16_t rx_handle;
-extern uint16_t	tx_handle;
-
-extern ble_uuid16_t    deviceInfo_uuid;
-extern ble_uuid16_t    modelNum_uuid;
-extern ble_uuid16_t    serialNum_uuid;
-extern ble_uuid16_t    firmwareRevision_uuid;
-
-extern ble_uuid16_t    service_uuid;
-extern ble_uuid128_t   rxChar_uuid;
-extern ble_uuid128_t   txChar_uuid;
-
-struct ble_hs_cfg;
-struct ble_gatt_register_ctxt;
-
+/**
+ * gatt_server.c
+*/
 void gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg);
 int gatt_svr_init(void);
+
+/**
+ * ble_server.c
+*/
+int	ble_server_init(void);
+void	ble_server_start(void);
 
 #ifdef __cplusplus
 }

@@ -5,7 +5,9 @@
 #include "host/ble_uuid.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
+
 #include "ble_server.h"
+#include "lvgl_ui.h"
 
 static const char *model_num = "ESP32-BOARD";
 static const char *serial_num = "MAC_ADRESS";
@@ -118,18 +120,32 @@ static int  read(uint16_t conn_handle, uint16_t attr_handle,
 static int  write(uint16_t conn_handle, uint16_t attr_handle,
                                struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
-    uint8_t data[8];
     uint8_t func;
+    char    *data;
     
     MODLOG_DFLT(INFO, "Data from the client: %.*s\n", ctxt->om->om_len, ctxt->om->om_data);
     
     //parsing
-    for (int i = 0; i < 8; i++)
+    func = ((uint8_t *)ctxt->om->om_data)[0];
+    data = heap_caps_malloc(sizeof(char) * ctxt->om->om_len, MALLOC_CAP_8BIT);
+    assert(data != 0);
+
+    for (int i = 0; i < ctxt->om->om_len - 1; i++)
     {
-        data[i] = ctxt->om->om_data[i];
-        MODLOG_DFLT(INFO, "Data [%d]: %X\n", i, data[i]);
+        data[i] = ((uint8_t *)ctxt->om->om_data)[i + 1];
     }
+    data[ctxt->om->om_len - 1] = '\0';
+    
     //call func
+    switch(func)
+    {
+        case 0x81:
+            print_text_lcd("%s\n", data);
+            heap_caps_free(data);
+            break;
+        default:
+            ;
+    }
     return 0;
 }
 

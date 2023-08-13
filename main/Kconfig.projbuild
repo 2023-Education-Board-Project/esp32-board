@@ -54,4 +54,15 @@ menu "Example Configuration"
         help
             Use this option to enable extended advertising in the example
 
+    choice EXAMPLE_LCD_CONTROLLER
+        prompt "LCD controller model"
+        default EXAMPLE_LCD_CONTROLLER_SSD1306
+        help
+            Select LCD controller model
+        config EXAMPLE_LCD_CONTROLLER_SSD1306
+            bool "SSD1306"
+        config EXAMPLE_LCD_CONTROLLER_SH1107
+            bool "SH1107"
+    endchoice
+
 endmenu

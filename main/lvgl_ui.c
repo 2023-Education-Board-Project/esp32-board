@@ -1,5 +1,7 @@
 #include "lvgl_ui.h"
 
+char	g_display_buf[128];
+
 static lv_disp_t	*disp;
 
 static bool notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
@@ -113,14 +115,20 @@ void	init_disp(void)
 
 	//rotation
 	lv_disp_set_rotation(disp, LV_DISP_ROT_NONE);
+
+	//clean buffer
+	memset(g_display_buf, 0, 128);
 }
 
 void	print_text_lcd(char *format, ...)
 {
-	va_list	argp;
-	char	buf[128];
-
+	static char	*buf = g_display_buf;
 	static lv_obj_t	*label = NULL;
+	
+	va_list	argp;
+	char	tmp[128];
+	size_t	len;
+
 
 	if (label != NULL)
 	{
@@ -128,20 +136,37 @@ void	print_text_lcd(char *format, ...)
 	}
 
 	va_start(argp, format);
-
-	memset(buf, 0, 128);
-	vsprintf(buf, format, argp);
-	printf("out: %s\n", buf);
+	//clean mem
+	memset(tmp, 0, 128);
+	//make va string
+	vsprintf(tmp, format, argp);
+	//get len
+	len = strlen(tmp);
+	
+	printf("out: %s\n", tmp);
 
 	va_end(argp);
+
+	if (len == 1 || (buf - g_display_buf) + len > 128)
+	{
+		//clear display
+		memset(g_display_buf, 0, 128);
+		buf = g_display_buf;
+	}
+	//cpy to buffer
+	if (len > 1)
+		memcpy(buf, tmp, len);
 
 	lv_obj_t	*scr = lv_disp_get_scr_act(disp);
 	label = lv_label_create(scr);
 
 	lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);//long mode
-
-	lv_label_set_text(label, buf);
+	//print global buffer
+	lv_label_set_text(label, g_display_buf);
 
 	lv_obj_set_width(label, disp->driver->hor_res);
 	lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
+
+	if (len > 1)
+		buf += len;
 }

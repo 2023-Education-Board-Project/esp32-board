@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -27,6 +28,8 @@
 #include "lcd_spec.h"
 
 #define I2C_HOST 0
+
+extern char	g_display_buf[128];
 
 void	init_disp(void);
 void	print_text_lcd(char *format, ...);

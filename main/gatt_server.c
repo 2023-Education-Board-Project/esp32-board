@@ -7,7 +7,7 @@
 #include "services/gatt/ble_svc_gatt.h"
 
 #include "ble_server.h"
-#include "lvgl_ui.h"
+#include "block.h"
 
 static const char *model_num = "ESP32-BOARD";
 static const char *serial_num = "MAC_ADRESS";
@@ -137,15 +137,8 @@ static int  write(uint16_t conn_handle, uint16_t attr_handle,
     data[ctxt->om->om_len - 1] = '\0';
     
     //call func
-    switch(func)
-    {
-        case 0x81:
-            print_text_lcd("%s\n", data);
-            heap_caps_free(data);
-            break;
-        default:
-            ;
-    }
+    mapping_block_task(func, data);
+    heap_caps_free(data);
     return 0;
 }
 

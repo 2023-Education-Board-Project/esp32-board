@@ -26,6 +26,7 @@
 #endif
 
 #include "lcd_spec.h"
+#include "queue.h"
 
 #define I2C_HOST 0
 

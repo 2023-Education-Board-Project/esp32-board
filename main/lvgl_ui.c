@@ -1,6 +1,7 @@
 #include "lvgl_ui.h"
 
-char	g_display_buf[128];
+lv_obj_t	*labels[3];
+static t_queue	g_text_queue;
 
 static lv_disp_t	*disp;
 
@@ -115,25 +116,49 @@ void	init_disp(void)
 
 	//rotation
 	lv_disp_set_rotation(disp, LV_DISP_ROT_NONE);
+	
+	//top label
+	labels[0] = lv_label_create(lv_disp_get_scr_act(disp));	
+	lv_label_set_long_mode(labels[0], LV_LABEL_LONG_WRAP);//long mode
+	lv_obj_set_width(labels[0], disp->driver->hor_res);
+	lv_obj_align(labels[0], LV_ALIGN_TOP_MID, 0, 0);
+	//mid label
+	labels[1] = lv_label_create(lv_disp_get_scr_act(disp));	
+	lv_label_set_long_mode(labels[1], LV_LABEL_LONG_WRAP);//long mode
+	lv_obj_set_width(labels[1], disp->driver->hor_res);
+	lv_obj_align(labels[1], LV_ALIGN_CENTER, 0, 0);
+	//low label
+	labels[2] = lv_label_create(lv_disp_get_scr_act(disp));	
+	lv_label_set_long_mode(labels[2], LV_LABEL_LONG_WRAP);//long mode
+	lv_obj_set_width(labels[2], disp->driver->hor_res);
+	lv_obj_align(labels[2], LV_ALIGN_BOTTOM_MID, 0, 0);
+	//clean display
+	for (int i = 0; i < 3; i++)
+	{
+		lv_label_set_text(labels[i], "");
+	}
+	//init queue
+	initqueue(&g_text_queue);
+}
 
-	//clean buffer
-	memset(g_display_buf, 0, 128);
+static void	free_disp(void)
+{
+	delqueue(&g_text_queue, heap_caps_free);
+	for (int i = 0; i < 3; i++)
+	{
+		lv_label_set_text(labels[i], "");
+	}
 }
 
 void	print_text_lcd(char *format, ...)
 {
-	static char	*buf = g_display_buf;
-	static lv_obj_t	*label = NULL;
+	static int	idx = 0;
+	lv_obj_t	*label;
+	char	*text_val;
 	
 	va_list	argp;
 	char	tmp[128];
 	size_t	len;
-
-
-	if (label != NULL)
-	{
-		lv_obj_del(label);
-	}
 
 	va_start(argp, format);
 	//clean mem
@@ -147,26 +172,30 @@ void	print_text_lcd(char *format, ...)
 
 	va_end(argp);
 
-	if (len == 1 || (buf - g_display_buf) + len > 128)
+	if (len > 0)
 	{
-		//clear display
-		memset(g_display_buf, 0, 128);
-		buf = g_display_buf;
+		text_val = (char *)heap_caps_malloc(sizeof(char) * len + 1, MALLOC_CAP_8BIT);
+		memset(text_val, 0, len + 1);
+		memcpy(text_val, tmp, len);
+		enqueue(&g_text_queue, (void *)text_val);
+
+		if (idx > 2)
+		{
+			dequeue(&g_text_queue, heap_caps_free);
+			
+			for (int i = 0; i < 2; i++)
+			{
+				lv_label_set_text(labels[i], (char *)get_item(&g_text_queue, i));
+			}
+			idx = 2;
+		}
+		label = labels[idx++];
+
+		lv_label_set_text(label, text_val);
 	}
-	//cpy to buffer
-	if (len > 1)
-		memcpy(buf, tmp, len);
-
-	lv_obj_t	*scr = lv_disp_get_scr_act(disp);
-	label = lv_label_create(scr);
-
-	lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);//long mode
-	//print global buffer
-	lv_label_set_text(label, g_display_buf);
-
-	lv_obj_set_width(label, disp->driver->hor_res);
-	lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
-
-	if (len > 1)
-		buf += len;
+	else
+	{
+		free_disp();
+		idx = 0;
+	}
 }

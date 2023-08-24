@@ -1,11 +1,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-# include "freertos/FreeRTOS.h"
-
 #include "queue.h"
 
-void	init(t_queue *queue)
+void	initqueue(t_queue *queue)
 {
 	queue->size = 0;
 	queue->head.val = NULL;
@@ -30,19 +28,18 @@ void	enqueue(t_queue *queue, void *val)
 	queue->size += 1;
 }
 
-void	*dequeue(t_queue *queue)
+void	dequeue(t_queue *queue, void (*del)(void *))
 {
 	t_node	*tmp;
-	void	*value;
 	
 	assert(queue->size);
 	tmp = queue->head.next;
-	value = tmp->val;
+	del(tmp->val);
 	queue->head.next = queue->head.next->next;
 	heap_caps_free(tmp);
 	queue->size -= 1;
-
-	return value;
+	if (!queue->size)
+		queue->tail = &(queue->head);
 }
 
 void	*get_item(t_queue *queue, int index)
@@ -56,8 +53,8 @@ void	*get_item(t_queue *queue, int index)
 	return tmp->val;
 }
 
-void	delqueue(t_queue *queue)
+void	delqueue(t_queue *queue, void (*del)(void *))
 {
 	while (queue->size)
-		dequeue(queue);
+		dequeue(queue, del);
 }

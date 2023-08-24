@@ -21,6 +21,9 @@ void	mapping_block_task(uint8_t func, char *data)
 static void	display_func(char *data)
 {
 	static int	i = 0;
-	print_text_lcd("%s:%d\n", data, i);
+	if (!strlen(data))
+		print_text_lcd("%s", data);
+	else
+		print_text_lcd("%s:%d\n", data, i);
 	i++;
 }

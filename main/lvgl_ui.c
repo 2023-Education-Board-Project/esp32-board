@@ -143,7 +143,14 @@ void	init_disp(void)
 
 static void	free_disp(void)
 {
-	delqueue(&g_text_queue, heap_caps_free);
+	int	size;
+
+	xSemaphoreTake(g_text_queue.mutex, 1000 / portTICK_PERIOD_MS);
+	size = g_text_queue.size;
+	xSemaphoreGive(g_text_queue.mutex);
+	
+	while (size--)
+		dequeue(&g_text_queue, heap_caps_free);
 	for (int i = 0; i < 3; i++)
 	{
 		lv_label_set_text(labels[i], "");

@@ -15,6 +15,8 @@ typedef struct s_queue
 	t_node	head;
 	t_node	*tail;
 	int	size;
+
+	SemaphoreHandle_t	mutex;
 }	t_queue;
 
 void	initqueue(t_queue *queue);

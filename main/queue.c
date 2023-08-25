@@ -9,6 +9,7 @@ void	initqueue(t_queue *queue)
 	queue->head.val = NULL;
 	queue->head.next = NULL;
 	queue->tail = &(queue->head);
+	queue->mutex = xSemaphoreCreateMutex();
 }
 
 void	enqueue(t_queue *queue, void *val)
@@ -22,10 +23,13 @@ void	enqueue(t_queue *queue, void *val)
 	tmp->val = val;
 	tmp->next = NULL;
 	
+	xSemaphoreTake(queue->mutex, 1000 / portTICK_PERIOD_MS);
+
 	queue->tail->next = (void *)tmp;
 	queue->tail = (void *)tmp;
 
 	queue->size += 1;
+	xSemaphoreGive(queue->mutex);
 }
 
 void	dequeue(t_queue *queue, void (*del)(void *))
@@ -33,13 +37,18 @@ void	dequeue(t_queue *queue, void (*del)(void *))
 	t_node	*tmp;
 	
 	assert(queue->size);
+	xSemaphoreTake(queue->mutex, 1000 / portTICK_PERIOD_MS);
+	
 	tmp = queue->head.next;
-	del(tmp->val);
 	queue->head.next = queue->head.next->next;
-	heap_caps_free(tmp);
 	queue->size -= 1;
 	if (!queue->size)
 		queue->tail = &(queue->head);
+
+	xSemaphoreGive(queue->mutex);
+	
+	del(tmp->val);
+	heap_caps_free(tmp);
 }
 
 void	*get_item(t_queue *queue, int index)
@@ -47,14 +56,25 @@ void	*get_item(t_queue *queue, int index)
 	t_node	*tmp;
 
 	assert(index < queue->size);
+	xSemaphoreTake(queue->mutex, 1000 / portTICK_PERIOD_MS);
+	
 	tmp = queue->head.next;
 	for (int i = 0; i < index; i++)
 		tmp = tmp->next;
+	
+	xSemaphoreGive(queue->mutex);
 	return tmp->val;
 }
 
 void	delqueue(t_queue *queue, void (*del)(void *))
 {
-	while (queue->size)
+	int	size;
+
+	xSemaphoreTake(queue->mutex, 1000 / portTICK_PERIOD_MS);
+	size = queue->size;
+	xSemaphoreGive(queue->mutex);
+	
+	while (size--)
 		dequeue(queue, del);
+	vSemaphoreDelete(queue->mutex);
 }

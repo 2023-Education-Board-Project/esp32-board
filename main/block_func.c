@@ -5,6 +5,7 @@
 #include "block.h"
 
 static void	display_func(char *data);
+static void	event_handler(char *data);
 
 void	mapping_block_task(uint8_t func, char *data)
 {
@@ -13,6 +14,8 @@ void	mapping_block_task(uint8_t func, char *data)
 		case 0x81:
 			display_func(data);
 			break;
+		case 0x83:
+			event_handler(data);
 		default:
 			;
 	}
@@ -26,4 +29,9 @@ static void	display_func(char *data)
 	else
 		print_text_lcd("%s:%d\n", data, i);
 	i++;
+}
+
+static void	event_handler(char *data)
+{
+	
 }

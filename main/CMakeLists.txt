@@ -4,6 +4,7 @@ set(srcs "main.c"
     "ble_server.c"
     "block_func.c"
     "queue.c"
+    "gpio.c"
     )
 
 

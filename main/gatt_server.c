@@ -120,25 +120,22 @@ static int  read(uint16_t conn_handle, uint16_t attr_handle,
 static int  write(uint16_t conn_handle, uint16_t attr_handle,
                                struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
-    uint8_t func;
-    char    *data;
+    uint8_t *func;
     
     MODLOG_DFLT(INFO, "Data from the client: %.*s\n", ctxt->om->om_len, ctxt->om->om_data);
     
-    //parsing
-    func = ((uint8_t *)ctxt->om->om_data)[0];
-    data = heap_caps_malloc(sizeof(char) * ctxt->om->om_len, MALLOC_CAP_8BIT);
-    assert(data != 0);
+    func = heap_caps_malloc(sizeof(uint8_t) * ctxt->om->om_len, MALLOC_CAP_8BIT);
+    assert(func != 0);
 
-    for (int i = 0; i < ctxt->om->om_len - 1; i++)
+    for (int i = 0; i < ctxt->om->om_len; i++)
     {
-        data[i] = ((uint8_t *)ctxt->om->om_data)[i + 1];
+        func[i] = ((uint8_t *)ctxt->om->om_data)[i];
     }
-    data[ctxt->om->om_len - 1] = '\0';
+    func[ctxt->om->om_len - 1] = '\0';
     
     //call func
-    mapping_block_task(func, data);
-    heap_caps_free(data);
+    mapping_block_task(func);
+    heap_caps_free(func);
     return 0;
 }
 

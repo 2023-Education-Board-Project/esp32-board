@@ -124,14 +124,14 @@ static int  write(uint16_t conn_handle, uint16_t attr_handle,
     
     MODLOG_DFLT(INFO, "Data from the client: %.*s\n", ctxt->om->om_len, ctxt->om->om_data);
     
-    func = heap_caps_malloc(sizeof(uint8_t) * ctxt->om->om_len, MALLOC_CAP_8BIT);
+    func = heap_caps_malloc(sizeof(uint8_t) * ctxt->om->om_len + 1, MALLOC_CAP_8BIT);
     assert(func != 0);
 
     for (int i = 0; i < ctxt->om->om_len; i++)
     {
         func[i] = ((uint8_t *)ctxt->om->om_data)[i];
     }
-    func[ctxt->om->om_len - 1] = '\0';
+    func[ctxt->om->om_len] = '\0';
     
     //call func
     mapping_block_task(func);

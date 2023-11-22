@@ -23,7 +23,7 @@ void	mapping_block_task(uint8_t *func)
 {
 	switch (func[0])
 	{
-		case 0x81:
+		case 0x81://opcode
 			task_init(&(func[1]));
 			break;
 		default:
